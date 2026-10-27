@@ -215,7 +215,8 @@ DESCRIBE tbMatricula;
  * Os tamanhos (VARCHAR(100) e CHAR(11)) estão corretos.
  */
 
-CREATE DATABASE IF NOT EXISTS dbTreinamento;
+DROP DATABASE IF EXISTS dbTreinamento;  -- permite executar o exercício novamente do zero
+CREATE DATABASE dbTreinamento;
 USE dbTreinamento;
 
 -- estrutura como o desenvolvedor implementou
@@ -239,6 +240,7 @@ DESCRIBE cliente;
 
 -- ex 16 --
 
+DROP DATABASE IF EXISTS dbLocadoraTeste;  -- permite executar os exercícios 16 a 19 novamente do zero
 CREATE DATABASE dbLocadoraTeste;
 USE dbLocadoraTeste;
 
@@ -313,6 +315,7 @@ ALTER TABLE equipamento ADD marca VARCHAR(80) NOT NULL;
 ALTER TABLE cliente DROP COLUMN telefone;
 
 -- o CHECK usa a coluna, então é retirado antes da renomeação e recriado depois
+-- (só funciona uma vez: para repetir, execute de novo a partir do ex 16)
 ALTER TABLE equipamento DROP CHECK ChkEquipamentoValor;
 ALTER TABLE equipamento RENAME COLUMN valor_diario TO valor_locacao;
 ALTER TABLE equipamento ADD CONSTRAINT ChkEquipamentoValor CHECK (valor_locacao >= 0);
