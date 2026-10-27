@@ -203,3 +203,154 @@ DESCRIBE tbMatricula;
 
 -- ex 15 --
 
+
+/*
+ * Regras do projeto que NÃO foram representadas no banco físico:
+ *   - id_cliente: não é chave primária nem é gerado automaticamente
+ *     (aceita repetição e valor nulo, então não identifica o cliente);
+ *   - nome: obrigatório no projeto, mas a coluna aceita NULL;
+ *   - cpf: obrigatório e único no projeto, mas aceita NULL e repetição;
+ *   - ativo: "inicialmente ativo" exige DEFAULT TRUE (e NOT NULL),
+ *     mas a coluna não tem valor padrão.
+ * Os tamanhos (VARCHAR(100) e CHAR(11)) estão corretos.
+ */
+
+CREATE DATABASE IF NOT EXISTS dbTreinamento;
+USE dbTreinamento;
+
+-- estrutura como o desenvolvedor implementou
+CREATE TABLE cliente (
+    id_cliente INT,
+    nome       VARCHAR(100),
+    cpf        CHAR(11),
+    ativo      BOOLEAN
+);
+
+DESCRIBE cliente;
+
+-- correções alterando a estrutura existente
+ALTER TABLE cliente MODIFY id_cliente INT AUTO_INCREMENT PRIMARY KEY;
+ALTER TABLE cliente MODIFY nome VARCHAR(100) NOT NULL;
+ALTER TABLE cliente MODIFY cpf CHAR(11) NOT NULL;
+ALTER TABLE cliente ADD CONSTRAINT UqClienteCpf UNIQUE (cpf);
+ALTER TABLE cliente MODIFY ativo BOOLEAN NOT NULL DEFAULT TRUE;
+
+DESCRIBE cliente;
+
+-- ex 16 --
+
+CREATE DATABASE dbLocadoraTeste;
+USE dbLocadoraTeste;
+
+CREATE TABLE cliente (
+    id_cliente INT AUTO_INCREMENT PRIMARY KEY,
+    nome       VARCHAR(150) NOT NULL,
+    documento  VARCHAR(14) NOT NULL UNIQUE,  -- comporta CPF (11) ou CNPJ (14)
+    telefone   VARCHAR(20),
+    ativo      BOOL NOT NULL DEFAULT TRUE
+);
+
+CREATE TABLE categoria (
+    id_categoria INT AUTO_INCREMENT PRIMARY KEY,
+    nome         VARCHAR(80) NOT NULL UNIQUE
+);
+
+CREATE TABLE equipamento (
+    id_equipamento INT AUTO_INCREMENT PRIMARY KEY,
+    nome           VARCHAR(120) NOT NULL,
+    id_categoria   INT NOT NULL,
+    valor_diario   DECIMAL(10, 2) NOT NULL,
+    situacao       VARCHAR(20) NOT NULL DEFAULT 'DISPONIVEL',
+    CONSTRAINT ChkEquipamentoValor CHECK (valor_diario >= 0),
+    CONSTRAINT FkEquipamentoCategoria
+        FOREIGN KEY (id_categoria) REFERENCES categoria (id_categoria)
+);
+
+CREATE TABLE locacao (
+    id_locacao              INT AUTO_INCREMENT PRIMARY KEY,
+    id_cliente              INT NOT NULL,
+    data_retirada           DATETIME NOT NULL,
+    data_prevista_devolucao DATE NOT NULL,
+    situacao                VARCHAR(20) NOT NULL,
+    CONSTRAINT FkLocacaoCliente
+        FOREIGN KEY (id_cliente) REFERENCES cliente (id_cliente)
+);
+
+CREATE TABLE item_locacao (
+    id_locacao             INT NOT NULL,
+    id_equipamento         INT NOT NULL,
+    valor_diario_utilizado DECIMAL(10, 2) NOT NULL,
+    PRIMARY KEY (id_locacao, id_equipamento),  -- chave composta: o mesmo equipamento não aparece duas vezes na mesma locação
+    CONSTRAINT ChkItemLocacaoValor CHECK (valor_diario_utilizado >= 0),
+    CONSTRAINT FkItemLocacaoLocacao
+        FOREIGN KEY (id_locacao) REFERENCES locacao (id_locacao),
+    CONSTRAINT FkItemLocacaoEquipamento
+        FOREIGN KEY (id_equipamento) REFERENCES equipamento (id_equipamento)
+);
+
+SHOW DATABASES;
+SHOW TABLES;
+
+DESCRIBE cliente;
+DESCRIBE categoria;
+DESCRIBE equipamento;
+DESCRIBE locacao;
+DESCRIBE item_locacao;
+
+-- chaves e relacionamentos
+SELECT TABLE_NAME, CONSTRAINT_NAME, COLUMN_NAME,
+       REFERENCED_TABLE_NAME, REFERENCED_COLUMN_NAME
+FROM information_schema.KEY_COLUMN_USAGE
+WHERE TABLE_SCHEMA = 'dbLocadoraTeste'
+ORDER BY TABLE_NAME, CONSTRAINT_NAME;
+
+-- ex 17 --
+
+USE dbLocadoraTeste;
+
+ALTER TABLE equipamento MODIFY nome VARCHAR(180) NOT NULL;
+ALTER TABLE equipamento ADD marca VARCHAR(80) NOT NULL;
+ALTER TABLE cliente DROP COLUMN telefone;
+
+-- o CHECK usa a coluna, então é retirado antes da renomeação e recriado depois
+ALTER TABLE equipamento DROP CHECK ChkEquipamentoValor;
+ALTER TABLE equipamento RENAME COLUMN valor_diario TO valor_locacao;
+ALTER TABLE equipamento ADD CONSTRAINT ChkEquipamentoValor CHECK (valor_locacao >= 0);
+
+RENAME TABLE categoria TO tipo_equipamento;
+
+SHOW TABLES;
+DESCRIBE cliente;
+DESCRIBE equipamento;
+DESCRIBE tipo_equipamento;
+SHOW CREATE TABLE equipamento;  -- a FK passa a apontar para tipo_equipamento
+
+-- ex 18 --
+
+USE dbLocadoraTeste;
+
+CREATE TABLE equipamento_importacao (
+    codigo     VARCHAR(30),
+    descricao  VARCHAR(180),
+    quantidade INT
+);
+
+DESCRIBE equipamento_importacao;
+
+-- Situação A: apagar os dados e manter a estrutura para reutilização -> TRUNCATE
+TRUNCATE TABLE equipamento_importacao;
+
+-- Situação B: a estrutura não terá mais utilidade -> DROP
+DROP TABLE IF EXISTS equipamento_importacao;
+
+SHOW TABLES;
+
+-- ex 19 --
+
+SHOW DATABASES;
+
+-- bancos usados nesta sequência apenas para treinamento (dbHorizonte não é criado)
+DROP DATABASE IF EXISTS dbTreinamento;
+DROP DATABASE IF EXISTS dbLocadoraTeste;
+
+SHOW DATABASES;
